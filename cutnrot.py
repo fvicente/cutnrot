@@ -1,5 +1,5 @@
 #
-# cutnrot.py
+# cutnrot.py version 1.0
 #
 # A python script to cut an image in sub-images, rotate and save them
 #
