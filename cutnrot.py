@@ -45,7 +45,6 @@ class RotateCanvas(wx.ScrolledWindow):
 		self.Bind(wx.EVT_LEFT_UP, self.OnButtonEvent)
 		self.Bind(wx.EVT_RIGHT_UP, self.OnButtonEvent)
 		self.Bind(wx.EVT_PAINT, self.OnPaint)
-		self.outputString("Right click to rotate clockwise, Left click to rotate counter clockwise")
 
 	def getWidth(self):
 		return self.maxWidth
@@ -84,7 +83,7 @@ class RotateCanvas(wx.ScrolledWindow):
 		self.Refresh()
 
 	def outputString(self, text):
-		print text
+		#print text
 		self.GetParent().SetStatusText(text)
 
 
@@ -97,6 +96,7 @@ class RotateFrame(wx.Frame):
 		self.canvas.DoRedraw()
 		self.CreateStatusBar()
 		self.Show(True)
+		self.canvas.outputString("Right click to rotate clockwise, Left click to rotate counter clockwise")
 
 	def OnExit(self, event):
 		dlg = wx.MessageDialog(self, 'Save?', 'Close', wx.YES_NO | wx.ICON_QUESTION)
@@ -108,7 +108,7 @@ class RotateFrame(wx.Frame):
 			while os.path.isfile(newname):
 				i = i + 1
 				newname = head + "/" + fname + ("_%.4d"%i) + ".jpg"
-			print newname
+			#print newname
 			self.canvas.bmp.SaveFile(newname, wx.BITMAP_TYPE_JPEG)
 		dlg.Destroy()
 		self.Destroy()
@@ -125,7 +125,11 @@ class Canvas(wx.ScrolledWindow):
 		self.bmp = bmp
 		self.SetVirtualSize((bmp.GetWidth(), bmp.GetHeight()))
 		self.SetScrollRate(20, 20)
+		self.mousehere=False
 		self.Bind(wx.EVT_LEFT_UP, self.OnLeftButtonEvent)
+		self.Bind(wx.EVT_RIGHT_UP, self.OnLeftButtonEvent)
+		self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftButtonEvent)
+		self.Bind(wx.EVT_RIGHT_DOWN, self.OnLeftButtonEvent)
 		self.Bind(wx.EVT_PAINT, self.OnPaint)
 		self.outputString("Click Upper-Left corner")
 
@@ -148,7 +152,7 @@ class Canvas(wx.ScrolledWindow):
 		return newpos
 
 	def OnLeftButtonEvent(self, event):
-		if event.LeftUp():
+		if event.LeftUp() and self.mousehere:
 			if self.firstCoord:
 				self.secondCoord = self.ConvertEventCoords(event)
 				x=self.secondCoord[0]
@@ -157,7 +161,7 @@ class Canvas(wx.ScrolledWindow):
 				y = self.secondCoord[1]
 				if y >= self.bmp.GetHeight():
 					y=self.bmp.GetHeight()-1
-				print "%s"%str((x,y))
+				#print "%s"%str((x,y))
 				rect = wx.RectPP(self.firstCoord, (x,y))
 				bmp = self.bmp.GetSubBitmap(rect)
 				frame = RotateFrame(None, u"Rotate Sub-Image", bmp = bmp, bmpname = self.bmpname)
@@ -167,10 +171,14 @@ class Canvas(wx.ScrolledWindow):
 			else:
 				self.firstCoord = self.ConvertEventCoords(event)
 				self.outputString("%s Click Lower-Right corner" % str(self.firstCoord))
-		elif event.RightUp():
+		elif event.RightUp() and self.mousehere:
 			self.firstCoord = None
 			self.secondCoord = None
 			self.outputString("Click Upper-Left corner")
+		elif event.LeftDown() or event.RightDown():
+			self.mousehere=True
+		else:
+			self.mousehere=False
 
 	def DoRedraw(self):
 		self.maxWidth  = self.bmp.GetWidth()
@@ -183,7 +191,7 @@ class Canvas(wx.ScrolledWindow):
 		self.Update()
 
 	def outputString(self, text):
-		print text
+		#print text
 		self.GetParent().SetStatusText(text)
 
 
@@ -220,10 +228,14 @@ class MainFrame(wx.Frame):
 			paths = dlg.GetPaths()
 			try:
 				image = wx.Image(paths[0]).ConvertToBitmap()
+				if self.canvas:
+					self.canvas.Destroy()
+					self.canvas = None
 				self.canvas = Canvas(self, size = self.GetClientSize(), bmp = image, bmpname = paths[0])
 				self.canvas.DoRedraw()
 			except:
-				print "Invalid file"
+				pass
+				#print "Invalid file"
 		# Destroy the dialog. Don't do this until you are done with it!
 		# BAD things can happen otherwise!
 		dlg.Destroy()
@@ -233,6 +245,7 @@ class MainFrame(wx.Frame):
 		self.CreateStatusBar()
 		self.createMenu()
 		self.SetMinSize((100,100))
+		self.canvas = None
 
 
 class CutNRotGUI(wx.App):
